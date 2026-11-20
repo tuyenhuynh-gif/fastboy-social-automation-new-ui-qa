@@ -1,6 +1,6 @@
 # Danh sách bug — Module Login (từ đợt chạy Automation 19/11/2026)
 
-Nguồn: kết quả chạy `TC-CMN-AUTH-001 → 039` (xem `docs/reports/login-run-2026-11-19.md`).
+Nguồn: kết quả chạy `TC-CMN-AUTH-001 → 039` (lượt chạy ngày 2026-11-19).
 Chỉ gồm các case **FAIL do lỗi ứng dụng**. Case cần BA xác nhận (001, 014) và case BLOCKED không nằm ở đây.
 
 > **Mức độ** trong các file là **đề xuất của QA**, cần Lead/PO xác nhận khi đưa lên công cụ quản lý bug.

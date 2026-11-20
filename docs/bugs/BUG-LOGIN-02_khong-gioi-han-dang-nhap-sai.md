@@ -30,7 +30,6 @@
 
 ## Bằng chứng
 - `evidence/TC-CMN-AUTH-020-lan-sai-thu-10.png` (màn hình sau lần sai thứ 10)
-- Báo cáo HTML: `npx playwright show-report playwright-report-lockout`
 
 ## Ghi chú
 - Chính sách khoá (ngưỡng, thời gian khoá, cách chặn) chưa được chốt — Open Question **Q6** trong file test case. Cần BA/PO chốt để Dev triển khai.
