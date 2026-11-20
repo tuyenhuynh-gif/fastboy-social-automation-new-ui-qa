@@ -12,7 +12,7 @@ import {
 } from '../../utils/helpers';
 
 /**
- * Nguồn test case: test-cases/SAT_TestCase_Login_Common_v1.0.md — NHÓM A (validation & bảo mật form).
+ * Nguồn test case: test-cases/[v1.0] Test case Login và Hệ thống.md — NHÓM A (validation & bảo mật form).
  * Lưu ý: dữ liệu email trong các case lỗi định dạng/không tồn tại lấy nguyên văn từ test case
  * (không phải thông tin đăng nhập thật). Tài khoản thật luôn đọc từ .env.
  */
@@ -162,23 +162,15 @@ test.describe('Login — Validation & bảo mật form', () => {
 
     await test.step('Bước 4: Lặp lại với huong_dang@fastboy (thiếu phần mở rộng)', async () => {
       await login.emailInput.fill('huong_dang@fastboy');
-      const before = loginRequests.length;
       await login.submitButton.click();
-      await page.waitForTimeout(NO_REQUEST_WINDOW_MS);
-      const accepted = loginRequests.length > before;
-      test.info().annotations.push({ type: 'Bước 4', description: accepted ? 'Hệ thống CHẤP NHẬN định dạng (đã gửi request)' : 'Hệ thống CHẶN định dạng' });
-      if (accepted) {
-        // Expected (nhánh chấp nhận): phải đăng nhập được bình thường.
-        // Không có tài khoản @fastboy (không TLD) trong test data → không kiểm chứng được nhánh này.
-        test.info().annotations.push({ type: 'BLOCKED một phần', description: 'Không có tài khoản dạng @fastboy để kiểm chứng đăng nhập' });
-      } else {
-        // Expected (nhánh chặn): message nói rõ lý do; KHÔNG dùng cùng message chung cho 2 trường hợp khác bản chất
-        await captureEvidence(page, 'buoc4-message-huong_dang@fastboy');
-        const msgStep4 = (await login.emailError.innerText().catch(() => '')).trim();
-        test.info().annotations.push({ type: 'Message bước 4', description: msgStep4 });
-        await expect.soft(login.emailError).toBeVisible();
-        expect.soft(msgStep4, 'Message bước 4 phải khác message bước 3').not.toBe(msgStep3);
-      }
+      // Expected: Hiển thị rõ ràng thông báo lỗi
+      // (thông báo có thể nằm dưới ô Email hoặc là lỗi chung của form — chấp nhận cả hai)
+      const anyError = login.emailError.or(login.formError);
+      await expect.soft(anyError).toBeVisible({ timeout: 10_000 });
+      await captureEvidence(page, 'buoc4-message-huong_dang@fastboy');
+      const msgStep4 = (await anyError.first().innerText().catch(() => '')).trim();
+      test.info().annotations.push({ type: 'Message bước 4', description: msgStep4 });
+      expect.soft(msgStep4, 'Thông báo lỗi không được rỗng').not.toBe('');
     });
   });
 
@@ -237,17 +229,15 @@ test.describe('Login — Validation & bảo mật form', () => {
     });
 
     await test.step('Bước 4: Đọc nguyên văn message lỗi', async () => {
-      test.info().annotations.push({ type: 'Message email không tồn tại', description: msgNotExist });
+      // Expected: Message KHÔNG tiết lộ email có tồn tại hay không.
+      // Theo quyết định người dùng (2026-11-20): automation chỉ GHI LẠI nguyên văn message
+      // (annotation + ảnh bằng chứng) để người xem tự đánh giá, không tự động kết luận phần này.
+      test.info().annotations.push({
+        type: 'CẦN ĐÁNH GIÁ THỦ CÔNG — message có tiết lộ email tồn tại không?',
+        description: msgNotExist,
+      });
       // Expected: KHÔNG hiển thị thông tin kỹ thuật
       expect.soft(msgNotExist).not.toMatch(TECHNICAL_INFO);
-      // Expected: cùng một message với trường hợp sai mật khẩu.
-      // Để so sánh: thực hiện 1 lần đăng nhập email đúng + mật khẩu sai (dữ liệu của TC-CMN-AUTH-013).
-      const { email } = getTestUser();
-      await login.fillCredentials(email, 'WrongPass#012');
-      const msgWrongPass = await submitAndReadFormError(page, login);
-      await captureEvidence(page, 'message-sai-mat-khau');
-      test.info().annotations.push({ type: 'Message sai mật khẩu (đối chiếu)', description: msgWrongPass });
-      expect.soft(msgNotExist, 'Message giống trường hợp sai mật khẩu').toBe(msgWrongPass);
     });
   });
 

@@ -13,7 +13,7 @@ import {
 import { LoginPage } from '../../pages/LoginPage';
 
 /**
- * Nguồn test case: test-cases/SAT_TestCase_Login_Common_v1.0.md — NHÓM A (luồng đăng nhập).
+ * Nguồn test case: test-cases/[v1.0] Test case Login và Hệ thống.md — NHÓM A (luồng đăng nhập).
  */
 
 test.describe('Login — Luồng đăng nhập', () => {

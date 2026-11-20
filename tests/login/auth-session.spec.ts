@@ -12,7 +12,7 @@ import {
 } from '../../utils/helpers';
 
 /**
- * Nguồn test case: test-cases/SAT_TestCase_Login_Common_v1.0.md — NHÓM A (đăng xuất & session).
+ * Nguồn test case: test-cases/[v1.0] Test case Login và Hệ thống.md — NHÓM A (đăng xuất & session).
  * Precondition chung: "Đã đăng nhập bằng tài khoản vai trò Director • Admin, ngôn ngữ Tiếng Việt,
  * giao diện Sáng, đang ở màn Việc cần làm" → helper loginAsTestUser().
  */
@@ -203,32 +203,62 @@ test.describe('Login — Đăng xuất & Session', () => {
     const shell = await loginAsTestUser(page);
     const login = new LoginPage(page);
     const pageErrors = trackPageErrors(page);
+    // Khoá giao diện (ngôn ngữ, theme) là tuỳ chọn người dùng, KHÔNG phải khoá phiên
+    const preferenceKeys: string[] = [STORAGE_KEYS.locale, STORAGE_KEYS.theme];
+    let sessionKeys: string[] = [];
+    let redirected = false;
+    let elapsedMs = 0;
 
-    await test.step('Bước 1: Ghi lại tên các khoá liên quan phiên trong Local Storage', async () => {
+    await test.step('Bước 1: Ghi lại tên toàn bộ khoá liên quan phiên đăng nhập trong Local Storage', async () => {
       const keys = await page.evaluate(() => Object.keys(localStorage));
-      test.info().annotations.push({ type: 'Khoá localStorage', description: keys.join(', ') });
+      sessionKeys = keys.filter((k) => !preferenceKeys.includes(k));
+      test.info().annotations.push({ type: 'Khoá localStorage (tất cả)', description: keys.join(', ') });
+      test.info().annotations.push({ type: 'Khoá liên quan phiên', description: sessionKeys.join(', ') });
+      expect(sessionKeys, 'Phải có khoá chứa token').toContain(STORAGE_KEYS.session);
     });
 
-    await test.step('Bước 2: Xoá khoá chứa token', async () => {
+    await test.step('Bước 2: Xoá đúng 1 khoá chứa token, KHÔNG tải lại trang, KHÔNG bấm gì', async () => {
       await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEYS.session);
+      const start = Date.now();
+      // Expected: ứng dụng TỰ phát hiện và chuyển về màn đăng nhập NGAY, không cần thao tác thêm.
+      // Chờ tối đa 10s (dài hơn mức 2s của Expected) chỉ để đo được thời gian thực tế nếu chậm.
+      redirected = await login.emailInput
+        .waitFor({ state: 'visible', timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false);
+      elapsedMs = Date.now() - start;
+      await captureEvidence(page, 'sau-khi-xoa-token');
+      expect.soft(redirected, 'Tự chuyển về màn đăng nhập mà không cần thao tác').toBe(true);
     });
 
-    await test.step('Bước 3: Không tải lại trang, bấm mục Yêu cầu trên sidebar', async () => {
-      await shell.navRequests.click();
-      // Expected: bị lỗi xác thực và ứng dụng đưa về màn đăng nhập; KHÔNG hiển thị dữ liệu mới
-      await expect.soft(login.emailInput, 'Phải về màn đăng nhập').toBeVisible({ timeout: 10_000 });
-      await captureEvidence(page, 'sau-khi-xoa-token-va-bam-yeu-cau');
-      test.info().annotations.push({ type: 'URL sau bước 3', description: currentPathAndQuery(page) });
-      await expect.soft(page.getByTestId('shell-sidebar'), 'Vẫn hiển thị app').toHaveCount(0);
-      // Expected: KHÔNG hiện lỗi chưa bắt ở Console
+    await test.step('Bước 3: Đo thời gian từ lúc xoá tới lúc về màn đăng nhập', async () => {
+      test.info().annotations.push({
+        type: 'Thời gian đo thực tế',
+        description: redirected ? `${elapsedMs} ms` : `Không về màn đăng nhập sau ${elapsedMs} ms`,
+      });
+      // Expected: dưới 2 giây
+      expect.soft(redirected && elapsedMs < 2000, `Về màn đăng nhập dưới 2 giây (đo được ${elapsedMs} ms)`).toBe(true);
+    });
+
+    await test.step('Bước 4: Đọc URL cuối cùng và quan sát màn hình', async () => {
+      test.info().annotations.push({ type: 'URL bước 4', description: currentPathAndQuery(page) });
+      // Expected: URL là /login (có thể kèm redirect=<trang đang đứng>)
+      await expect.soft(page).toHaveURL(/\/login(\?|$)/);
+      // Expected: KHÔNG còn dữ liệu nghiệp vụ (tên salon, số việc, danh sách request)
+      await expect.soft(shell.sidebar, 'Vẫn hiển thị khung app').toHaveCount(0);
+      await expect.soft(shell.workQueueHeadline, 'Vẫn hiển thị số việc').toHaveCount(0);
+      // Expected: KHÔNG hiện lỗi 401/403 thô, KHÔNG màn trắng
+      await expect.soft(page.locator('body')).not.toContainText(/\b(401|403)\b|unauthorized|forbidden/i);
+      await expect.soft(login.emailInput.or(shell.sidebar), 'Màn trắng').toBeVisible();
+      // Expected: KHÔNG lỗi JavaScript chưa bắt ở Console
       expect.soft(pageErrors.map((e) => e.message)).toEqual([]);
     });
 
-    await test.step('Bước 4: Tải lại trang', async () => {
-      await page.reload();
-      // Expected: Chắc chắn về /login
-      await expect.soft(login.emailInput).toBeVisible();
-      await expect.soft(page).toHaveURL(/\/login/);
+    await test.step('Bước 5: Mở lại Local Storage kiểm tra các khoá còn lại', async () => {
+      const remaining = await page.evaluate(() => Object.keys(localStorage));
+      test.info().annotations.push({ type: 'Khoá còn lại sau bước 5', description: remaining.join(', ') });
+      // Expected: các khoá phiên còn lại cũng được dọn sạch
+      expect.soft(remaining.filter((k) => sessionKeys.includes(k)), 'Khoá phiên cũ còn sót').toEqual([]);
     });
   });
 

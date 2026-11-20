@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 
 /**
- * Nguồn test case: test-cases/SAT_TestCase_Login_Common_v1.0.md — NHÓM A (đăng nhập Google).
+ * Nguồn test case: test-cases/[v1.0] Test case Login và Hệ thống.md — NHÓM A (đăng nhập Google).
  * Theo quyết định trong CLAUDE.md (mục 1.1): luồng đăng nhập Google đầy đủ được test THỦ CÔNG,
  * không tự động hoá (Google chặn trình duyệt tự động, dễ khoá tài khoản, không lưu mật khẩu Google trong project).
  */

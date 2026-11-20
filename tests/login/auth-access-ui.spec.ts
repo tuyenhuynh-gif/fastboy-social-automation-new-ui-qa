@@ -10,7 +10,7 @@ import {
 } from '../../utils/helpers';
 
 /**
- * Nguồn test case: test-cases/SAT_TestCase_Login_Common_v1.0.md — NHÓM A.
+ * Nguồn test case: test-cases/[v1.0] Test case Login và Hệ thống.md — NHÓM A.
  * Mỗi test chạy trong context Playwright mới = cookie/localStorage/sessionStorage trống
  * (đúng precondition "CHƯA đăng nhập: đã xoá cookie, localStorage và sessionStorage").
  */
